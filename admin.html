@@ -1,32 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin - Roleta Hinoportuna</title>
+    <title>Admin Roleta</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+        .lista { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        .stock-baixo { color: red; font-weight: bold; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
     </style>
 </head>
 <body>
-
-    <div class="card">
-        <h2>Painel de Controlo - Hinoportuna</h2>
-        <p>Aqui podes ver o histórico e ajustar stock (em breve).</p>
-    </div>
-
-    <div class="card">
-        <h3>Últimos Ganhadores</h3>
-        <table id="tabela-ganhadores">
-            <tr>
-                <th>Nome</th>
-                <th>Prémio</th>
-                <th>Hora</th>
-            </tr>
+    <div class="lista">
+        <h2>Fila de Espera (Hinoportuna)</h2>
+        <table id="tabela">
+            <thead><tr><th>Nome</th><th>Hora</th></tr></thead>
+            <tbody id="corpo-tabela"></tbody>
         </table>
     </div>
 
@@ -43,14 +33,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Escutar histórico de ganhadores
-        db.ref('historico').limitToLast(10).on('child_added', (snapshot) => {
-            const dado = snapshot.val();
-            const tabela = document.getElementById('tabela-ganhadores');
-            const row = tabela.insertRow(1);
-            row.insertCell(0).innerText = dado.nome;
-            row.insertCell(1).innerText = dado.premio;
-            row.insertCell(2).innerText = new Date(dado.timestamp).toLocaleTimeString();
+        db.ref('pedidos').on('value', (snapshot) => {
+            const tbody = document.getElementById('corpo-tabela');
+            tbody.innerHTML = "";
+            snapshot.forEach((child) => {
+                const val = child.val();
+                tbody.innerHTML += `<tr><td>${val.nome}</td><td>${new Date(val.timestamp).toLocaleTimeString()}</td></tr>`;
+            });
         });
     </script>
 </body>
