@@ -8,26 +8,32 @@
     <style>
         body { background: #111; color: white; text-align: center; font-family: sans-serif; overflow: hidden; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         
-        /* QR Code maior e sem borda */
-        #qr-code { position: absolute; top: 30px; left: 30px; width: 220px; z-index: 5; opacity: 0.9; }
+        /* QR Code Grande à Esquerda */
+        #qr-container { position: absolute; top: 50%; left: 50px; transform: translateY(-50%); z-index: 100; text-align: center; }
+        #qr-code { width: 300px; height: auto; border-radius: 10px; display: block; }
+        #qr-text { margin-top: 15px; font-weight: bold; font-size: 1.5rem; color: #ffcc00; text-shadow: 2px 2px #000; }
         
-        #resultado { font-size: 3.8rem; font-weight: bold; margin-bottom: 10px; color: #ffcc00; text-shadow: 4px 4px #000; height: 80px; z-index: 10; }
+        #resultado { font-size: 4rem; font-weight: bold; margin-bottom: 20px; color: #ffcc00; text-shadow: 4px 4px #000; height: 90px; }
         
-        #canvas-container { position: relative; width: 600px; height: 600px; display: flex; align-items: center; justify-content: center; }
+        #canvas-container { position: relative; width: 600px; height: 600px; margin-left: 200px; /* Compensa o espaço do QR */ }
         
-        canvas { border: 12px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        canvas { border: 15px solid #333; border-radius: 50%; background: #222; box-shadow: 0 0 60px rgba(0,0,0,0.7); }
         
-        /* Seta ajustada para não tapar a roleta */
-        .seta { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 30px solid transparent; border-right: 30px solid transparent; border-top: 50px solid #ff0000; z-index: 25; pointer-events: none; }
+        /* Seta no Topo */
+        .seta { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 30px solid transparent; border-right: 30px solid transparent; border-top: 55px solid #ff0000; z-index: 50; }
         
-        #ze-central { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; z-index: 30; border-radius: 50%; background: white; padding: 4px; }
+        #ze-central { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; z-index: 60; border-radius: 50%; background: white; padding: 5px; }
         
-        .logo-top { width: 140px; margin-bottom: 5px; }
+        .logo-top { width: 150px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<img src="QR_Roleta_Hinoportuna.png" id="qr-code">
+<div id="qr-container">
+    <img src="qr_code_lethes.png" id="qr-code">
+    <div id="qr-text">SCAN PARA JOGAR</div>
+</div>
+
 <img src="logo_hinoportuna.png" class="logo-top">
 <div id="resultado">Aguardando Tunante...</div>
 
@@ -50,10 +56,9 @@
 
     const canvas = document.getElementById("wheel");
     const ctx = canvas.getContext("2d");
-    const cw = canvas.width / 2;
-    const ch = canvas.height / 2;
+    const cw = 300, ch = 300;
     let premiosAtuais = [];
-    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#111111", "#ff4444", "#9b59b6", "#e67e22", "#1abc9c"];
+    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#111", "#ff4444", "#9b59b6", "#e67e22", "#1abc9c"];
 
     db.ref('configuracao_premios').on('value', (snap) => {
         premiosAtuais = snap.val() || [];
@@ -64,27 +69,22 @@
         if (premiosAtuais.length === 0) return;
         const total = premiosAtuais.length;
         const slice = (Math.PI * 2) / total;
-        
         ctx.clearRect(0,0,600,600);
         premiosAtuais.forEach((p, i) => {
-            // Desenho começa no topo (-90 graus)
             const startAngle = (i * slice) - (Math.PI / 2);
             const endAngle = ((i + 1) * slice) - (Math.PI / 2);
-
             ctx.beginPath();
             ctx.fillStyle = cores[i % cores.length];
             ctx.moveTo(cw, ch);
             ctx.arc(cw, ch, cw, startAngle, endAngle);
             ctx.fill();
-
-            // Texto
             ctx.save();
             ctx.translate(cw, ch);
             ctx.rotate(startAngle + slice/2);
             ctx.fillStyle = "white";
             ctx.font = "bold 20px sans-serif";
             ctx.textAlign = "right";
-            ctx.fillText(p.n, cw - 25, 10);
+            ctx.fillText(p.n, cw - 30, 8);
             ctx.restore();
         });
     }
@@ -93,17 +93,13 @@
         const dados = snapshot.val();
         if (dados && dados.nome && premiosAtuais.length > 0) {
             document.getElementById('resultado').innerText = dados.nome + " a girar...";
-            
-            let random = Math.random() * 100;
-            let acumulado = 0;
-            let escolhidoIdx = 0;
+            let random = Math.random() * 100, acumulado = 0, escolhidoIdx = 0;
             for(let i=0; i < premiosAtuais.length; i++) {
                 acumulado += premiosAtuais[i].p;
                 if(random <= acumulado) { escolhidoIdx = i; break; }
             }
 
             const grausPorFatia = 360 / premiosAtuais.length;
-            // Cálculo para alinhar o centro da fatia com a seta no topo
             const compensacaoCentro = grausPorFatia / 2;
             const rotacaoFinal = 3600 + (360 - (escolhidoIdx * grausPorFatia)) - compensacaoCentro; 
 
@@ -113,19 +109,9 @@
             setTimeout(() => {
                 const ganhou = premiosAtuais[escolhidoIdx];
                 document.getElementById('resultado').innerText = "Ganhaste: " + ganhou.n + "!";
-                
-                db.ref('historico').push({
-                    nome: dados.nome,
-                    premio: ganhou.n,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-
-                if (ganhou.s > 0) {
-                    db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(ganhou.s - 1);
-                }
-
+                db.ref('historico').push({ nome: dados.nome, premio: ganhou.n, timestamp: firebase.database.ServerValue.TIMESTAMP });
+                if (ganhou.s > 0) db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(ganhou.s - 1);
                 db.ref('pedidos/' + snapshot.key).remove();
-                
                 setTimeout(() => {
                     canvas.style.transition = "none";
                     canvas.style.transform = `rotate(${rotacaoFinal % 360}deg)`;
