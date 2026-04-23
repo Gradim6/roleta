@@ -1,46 +1,84 @@
-// Dentro do script da roleta.html, substitua a parte da lógica por esta:
+// Substitui todo o <script> da roleta pelo seguinte:
 
-let premiosAtuais = [];
+    const firebaseConfig = {
+        apiKey: "AIzaSyBVH7T8fgOQhwny3jolprJCLmbCjHBMmGQ",
+        authDomain: "roleta-lethes.firebaseapp.com",
+        databaseURL: "https://roleta-lethes-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "roleta-lethes",
+        storageBucket: "roleta-lethes.firebasestorage.app",
+        messagingSenderId: "539471979058",
+        appId: "1:539471979058:web:e1636f48c93e0e50e0922b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-// Carrega as definições do Admin
-db.ref('configuracao_premios').on('value', (snap) => {
-    premiosAtuais = snap.val();
-});
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    let premiosAtuais = [];
+    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#444444", "#ff4444", "#9b59b6", "#e67e22"];
 
-db.ref('pedidos').on('child_added', (snapshot) => {
-    const dados = snapshot.val();
-    if (dados && dados.nome) {
-        document.getElementById('resultado').innerText = dados.nome + " está a girar!";
+    // Escuta mudanças nos brindes e redesenha a roleta
+    db.ref('configuracao_premios').on('value', (snap) => {
+        premiosAtuais = snap.val() || [];
+        desenharRoleta();
+    });
+
+    function desenharRoleta() {
+        if (premiosAtuais.length === 0) return;
+        const total = premiosAtuais.length;
+        const slice = (Math.PI * 2) / total;
         
-        // Sorteio baseado nas % do Admin
-        let random = Math.random() * 100;
-        let acumulado = 0;
-        let escolhidoIdx = 3; // Default: Tenta outra vez
-
-        for(let i=0; i < premiosAtuais.length; i++) {
-            acumulado += premiosAtuais[i].p;
-            if(random <= acumulado) {
-                // Verifica se há stock
-                if(premiosAtuais[i].s > 0) {
-                    escolhidoIdx = i;
-                } else {
-                    escolhidoIdx = 3; // Sem stock vai para Tenta outra vez
-                }
-                break;
-            }
-        }
-
-        const premioFinal = premiosAtuais[escolhidoIdx].n;
-        girar(dados.nome, premioFinal);
-
-        // Atualiza o stock no Firebase (diminui 1)
-        if(escolhidoIdx !== 3) { // Não gasta stock do "Tenta outra vez"
-            let novoStock = premiosAtuais[escolhidoIdx].s - 1;
-            db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(novoStock);
-        }
-
-        setTimeout(() => {
-            db.ref('pedidos/' + snapshot.key).remove();
-        }, 4500);
+        ctx.clearRect(0,0,500,500);
+        premiosAtuais.forEach((p, i) => {
+            ctx.beginPath();
+            ctx.fillStyle = cores[i % cores.length];
+            ctx.moveTo(250, 250);
+            ctx.arc(250, 250, 250, i * slice, (i + 1) * slice);
+            ctx.fill();
+            
+            // Texto
+            ctx.save();
+            ctx.translate(250, 250);
+            ctx.rotate(i * slice + slice/2);
+            ctx.fillStyle = "white";
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillText(p.n, 110, 5);
+            ctx.restore();
+        });
     }
-});
+
+    db.ref('pedidos').on('child_added', (snapshot) => {
+        const dados = snapshot.val();
+        if (dados && dados.nome) {
+            document.getElementById('resultado').innerText = dados.nome + " está a girar!";
+            
+            let random = Math.random() * 100;
+            let acumulado = 0;
+            let escolhidoIdx = 0;
+
+            for(let i=0; i < premiosAtuais.length; i++) {
+                acumulado += premiosAtuais[i].p;
+                if(random <= acumulado && premiosAtuais[i].s > 0) {
+                    escolhidoIdx = i;
+                    break;
+                }
+            }
+
+            // Gira visualmente (aprox 10 voltas)
+            const voltas = 3600 + (360 - (escolhidoIdx * (360/premiosAtuais.length)));
+            canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
+            canvas.style.transform = `rotate(${voltas}deg)`;
+
+            setTimeout(() => {
+                const premioGanho = premiosAtuais[escolhidoIdx].n;
+                document.getElementById('resultado').innerText = "Ganhaste: " + premioGanho + "!";
+                
+                // Retira 1 do stock no Firebase
+                let novoStock = premiosAtuais[escolhidoIdx].s - 1;
+                db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(Math.max(0, novoStock));
+
+                // Limpa pedido
+                db.ref('pedidos/' + snapshot.key).remove();
+            }, 4500);
+        }
+    });
