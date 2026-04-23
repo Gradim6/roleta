@@ -11,7 +11,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
         th { background: #005ea8; color: white; }
-        input { padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 90%; }
+        input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 85%; }
         .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 5px; }
         .btn-save { background: #32CD32; color: white; }
         .btn-add { background: #005ea8; color: white; }
@@ -36,7 +36,19 @@
     <br>
     <button class="btn btn-add" onclick="adicionarLinha()">➕ Adicionar Novo Brinde</button>
     <button class="btn btn-save" onclick="salvarConfig()">💾 Guardar Todas as Alterações</button>
-    <p><small>* Certifica-te que a soma das probabilidades é 100%.</small></p>
+</div>
+
+<div class="card">
+    <h2>🕒 Últimas Entradas (Fila de Espera)</h2>
+    <table id="tabela-fila">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Hora de Entrada</th>
+            </tr>
+        </thead>
+        <tbody id="corpo-fila"></tbody>
+    </table>
 </div>
 
 <script>
@@ -52,14 +64,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Carregar dados existentes
-    db.ref('configuracao_premios').on('value', (snap) => {
+    // Carregar Brindes
+    db.ref('configuracao_premios').once('value', (snap) => {
         const data = snap.val() || [];
         const tbody = document.getElementById('corpo-premios');
         tbody.innerHTML = "";
-        data.forEach((item, index) => {
-            renderizarLinha(item.n, item.s, item.p);
-        });
+        data.forEach((item) => renderizarLinha(item.n, item.s, item.p));
     });
 
     function renderizarLinha(nome = "", stock = 0, prob = 0) {
@@ -73,35 +83,29 @@
         `;
     }
 
-    function adicionarLinha() {
-        renderizarLinha("Novo Item", 10, 0);
-    }
+    function adicionarLinha() { renderizarLinha("Novo Brinde", 10, 0); }
 
     function salvarConfig() {
         const nomes = document.querySelectorAll('.p-nome');
         const stocks = document.querySelectorAll('.p-stock');
         const probs = document.querySelectorAll('.p-prob');
         const novosDados = [];
-        let somaProb = 0;
-
         nomes.forEach((n, i) => {
-            const p = parseInt(probs[i].value);
-            somaProb += p;
-            novosDados.push({
-                id: i,
-                n: n.value,
-                s: parseInt(stocks[i].value),
-                p: p
-            });
+            novosDados.push({ id: i, n: n.value, s: parseInt(stocks[i].value), p: parseInt(probs[i].value) });
         });
-
-        if (somaProb !== 100) {
-            alert("Aviso: A soma das probabilidades é " + somaProb + "%. Tenta ajustar para 100%!");
-        }
-
         db.ref('configuracao_premios').set(novosDados);
-        alert("Configurações guardadas com sucesso!");
+        alert("Configurações guardadas!");
     }
+
+    // Monitorizar Fila de Espera
+    db.ref('pedidos').on('value', (snapshot) => {
+        const tbody = document.getElementById('corpo-fila');
+        tbody.innerHTML = "";
+        snapshot.forEach((child) => {
+            const val = child.val();
+            tbody.innerHTML += `<tr><td>${val.nome}</td><td>${new Date(val.timestamp).toLocaleTimeString()}</td></tr>`;
+        });
+    });
 </script>
 </body>
 </html>
