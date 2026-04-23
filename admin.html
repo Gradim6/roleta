@@ -1,46 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt">
 <head>
-    <title>Admin Roleta</title>
+    <meta charset="UTF-8">
+    <title>Painel de Stock - Hinoportuna</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
-        .lista { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        th { background: #005ea8; color: white; }
+        input[type="number"] { width: 60px; padding: 5px; }
+        .btn-save { background: #32CD32; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="lista">
-        <h2>Fila de Espera (Hinoportuna)</h2>
-        <table id="tabela">
-            <thead><tr><th>Nome</th><th>Hora</th></tr></thead>
-            <tbody id="corpo-tabela"></tbody>
-        </table>
-    </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBVH7T8fgOQhwny3jolprJCLmbCjHBMmGQ",
-            authDomain: "roleta-lethes.firebaseapp.com",
-            databaseURL: "https://roleta-lethes-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "roleta-lethes",
-            storageBucket: "roleta-lethes.firebasestorage.app",
-            messagingSenderId: "539471979058",
-            appId: "1:539471979058:web:e1636f48c93e0e50e0922b"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+<div class="card">
+    <h2>📦 Gestão de Prémios e Stock</h2>
+    <table id="tabela-stock">
+        <thead>
+            <tr>
+                <th>Prémio</th>
+                <th>Stock Atual</th>
+                <th>Probabilidade (%)</th>
+            </tr>
+        </thead>
+        <tbody id="corpo-premios">
+            </tbody>
+    </table>
+    <br>
+    <button class="btn-save" onclick="salvarConfig()">💾 Salvar Configurações</button>
+</div>
 
-        db.ref('pedidos').on('value', (snapshot) => {
-            const tbody = document.getElementById('corpo-tabela');
-            tbody.innerHTML = "";
-            snapshot.forEach((child) => {
-                const val = child.val();
-                tbody.innerHTML += `<tr><td>${val.nome}</td><td>${new Date(val.timestamp).toLocaleTimeString()}</td></tr>`;
-            });
+<div class="card">
+    <h2>🕒 Últimas Entradas</h2>
+    <table id="tabela-fila">
+        <thead><tr><th>Nome</th><th>Hora</th></tr></thead>
+        <tbody id="corpo-fila"></tbody>
+    </table>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBVH7T8fgOQhwny3jolprJCLmbCjHBMmGQ",
+        authDomain: "roleta-lethes.firebaseapp.com",
+        databaseURL: "https://roleta-lethes-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "roleta-lethes",
+        storageBucket: "roleta-lethes.firebasestorage.app",
+        messagingSenderId: "539471979058",
+        appId: "1:539471979058:web:e1636f48c93e0e50e0922b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Inicializar ou carregar prémios
+    const defaultPremios = [
+        { id: 0, n: "Shot Grátis", s: 50, p: 40 },
+        { id: 1, n: "Imperial", s: 30, p: 10 },
+        { id: 2, n: "Tshirt", s: 5, p: 5 },
+        { id: 3, n: "Tenta outra vez", s: 999, p: 45 }
+    ];
+
+    db.ref('configuracao_premios').on('value', (snap) => {
+        const data = snap.val() || defaultPremios;
+        const tbody = document.getElementById('corpo-premios');
+        tbody.innerHTML = "";
+        data.forEach((item, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.n}</td>
+                    <td><input type="number" id="s-${index}" value="${item.s}"></td>
+                    <td><input type="number" id="p-${index}" value="${item.p}"></td>
+                </tr>`;
         });
-    </script>
+    });
+
+    function salvarConfig() {
+        const novosDados = [];
+        const nomes = ["Shot Grátis", "Imperial", "Tshirt", "Tenta outra vez"];
+        for(let i=0; i<4; i++) {
+            novosDados.push({
+                id: i,
+                n: nomes[i],
+                s: parseInt(document.getElementById(`s-${i}`).value),
+                p: parseInt(document.getElementById(`p-${i}`).value)
+            });
+        }
+        db.ref('configuracao_premios').set(novosDados);
+        alert("Configurações atualizadas!");
+    }
+
+    db.ref('pedidos').on('value', (snapshot) => {
+        const tbody = document.getElementById('corpo-fila');
+        tbody.innerHTML = "";
+        snapshot.forEach((child) => {
+            const val = child.val();
+            tbody.innerHTML += `<tr><td>${val.nome}</td><td>${new Date(val.timestamp).toLocaleTimeString()}</td></tr>`;
+        });
+    });
+</script>
 </body>
 </html>
