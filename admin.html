@@ -2,52 +2,36 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Gestão Total - Hinoportuna</title>
+    <title>Admin Hinoportuna</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
         th { background: #005ea8; color: white; }
-        input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 85%; }
-        .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 5px; }
-        .btn-save { background: #32CD32; color: white; }
-        .btn-add { background: #005ea8; color: white; }
-        .btn-del { background: #ff4444; color: white; padding: 5px 10px; }
+        .btn-save { background: #32CD32; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; width: 100%; margin-top: 10px; font-weight: bold; }
+        input { width: 80%; padding: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📦 Gestão de Brindes, Stock e Probabilidades</h2>
-    <table id="tabela-premios">
-        <thead>
-            <tr>
-                <th>Nome do Brinde</th>
-                <th>Stock</th>
-                <th>Probabilidade (%)</th>
-                <th>Ação</th>
-            </tr>
-        </thead>
+    <h2>📦 Configuração de Brindes</h2>
+    <table>
+        <thead><tr><th>Nome</th><th>Stock</th><th>Prob %</th><th>Ação</th></tr></thead>
         <tbody id="corpo-premios"></tbody>
     </table>
-    <br>
-    <button class="btn btn-add" onclick="adicionarLinha()">➕ Adicionar Novo Brinde</button>
-    <button class="btn btn-save" onclick="salvarConfig()">💾 Guardar Todas as Alterações</button>
+    <button onclick="adicionarLinha()" style="margin-top:10px;">➕ Adicionar</button>
+    <button class="btn-save" onclick="salvarConfig()">💾 GUARDAR TUDO</button>
 </div>
 
 <div class="card">
-    <h2>🕒 Últimas Entradas (Fila de Espera)</h2>
-    <table id="tabela-fila">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Hora de Entrada</th>
-            </tr>
-        </thead>
-        <tbody id="corpo-fila"></tbody>
+    <h2>🕒 Últimos Ganhadores</h2>
+    <table>
+        <thead><tr><th>Nome</th><th>Ganhou</th><th>Hora</th></tr></thead>
+        <tbody id="corpo-historico"></tbody>
     </table>
 </div>
 
@@ -57,75 +41,47 @@
         authDomain: "roleta-lethes.firebaseapp.com",
         databaseURL: "https://roleta-lethes-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "roleta-lethes",
-        storageBucket: "roleta-lethes.firebasestorage.app",
-        messagingSenderId: "539471979058",
         appId: "1:539471979058:web:e1636f48c93e0e50e0922b"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Carregar Brindes
-    db.ref('configuracao_premios').once('value', (snap) => {
+    // Carregar configurações
+    db.ref('configuracao_premios').on('value', (snap) => {
         const data = snap.val() || [];
         const tbody = document.getElementById('corpo-premios');
         tbody.innerHTML = "";
-        data.forEach((item) => renderizarLinha(item.n, item.s, item.p));
+        data.forEach((item, i) => {
+            tbody.innerHTML += `<tr>
+                <td><input type="text" class="p-n" value="${item.n}"></td>
+                <td><input type="number" class="p-s" value="${item.s}"></td>
+                <td><input type="number" class="p-p" value="${item.p}"></td>
+                <td><button onclick="this.parentElement.parentElement.remove()">❌</button></td>
+            </tr>`;
+        });
     });
 
-    function renderizarLinha(nome = "", stock = 0, prob = 0) {
+    function adicionarLinha() {
         const tbody = document.getElementById('corpo-premios');
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td><input type="text" class="p-nome" value="${nome}"></td>
-            <td><input type="number" class="p-stock" value="${stock}"></td>
-            <td><input type="number" class="p-prob" value="${prob}"></td>
-            <td><button class="btn-del" onclick="this.parentElement.parentElement.remove()">Remover</button></td>
-        `;
+        tbody.innerHTML += `<tr><td><input type="text" class="p-n" value="Novo"></td><td><input type="number" class="p-s" value="10"></td><td><input type="number" class="p-p" value="0"></td><td><button onclick="this.parentElement.parentElement.remove()">❌</button></td></tr>`;
     }
-
-    function adicionarLinha() { renderizarLinha("Novo Brinde", 10, 0); }
 
     function salvarConfig() {
-        const nomes = document.querySelectorAll('.p-nome');
-        const stocks = document.querySelectorAll('.p-stock');
-        const probs = document.querySelectorAll('.p-prob');
-        const novosDados = [];
-        nomes.forEach((n, i) => {
-            novosDados.push({ id: i, n: n.value, s: parseInt(stocks[i].value), p: parseInt(probs[i].value) });
-        });
-        db.ref('configuracao_premios').set(novosDados);
-        alert("Configurações guardadas!");
+        const ns = document.querySelectorAll('.p-n'), ss = document.querySelectorAll('.p-s'), ps = document.querySelectorAll('.p-p');
+        const novos = [];
+        ns.forEach((n, i) => novos.push({ n: n.value, s: parseInt(ss[i].value), p: parseInt(ps[i].value) }));
+        db.ref('configuracao_premios').set(novos);
+        alert("Guardado!");
     }
 
-    // Monitorizar Fila de Espera
-    db.ref('pedidos').on('value', (snapshot) => {
-        const tbody = document.getElementById('corpo-fila');
+    // Histórico em tempo real
+    db.ref('historico').limitToLast(15).on('value', (snap) => {
+        const tbody = document.getElementById('corpo-historico');
         tbody.innerHTML = "";
-        snapshot.forEach((child) => {
-            const val = child.val();
-            tbody.innerHTML += `<tr><td>${val.nome}</td><td>${new Date(val.timestamp).toLocaleTimeString()}</td></tr>`;
-        });
-    });
-    
-    // Monitorizar o Histórico de Prémios (Últimas Entradas)
-    db.ref('historico').limitToLast(10).on('value', (snapshot) => {
-        const tbody = document.getElementById('corpo-fila');
-        tbody.innerHTML = "";
-        
-        // Vamos transformar em array para mostrar os mais recentes primeiro
-        const entradas = [];
-        snapshot.forEach((child) => {
-            entradas.unshift(child.val()); 
-        });
-
-        entradas.forEach((val) => {
-            const hora = new Date(val.timestamp).toLocaleTimeString();
-            tbody.innerHTML += `
-                <tr>
-                    <td>${val.nome}</td>
-                    <td>${val.premio}</td>
-                    <td>${hora}</td>
-                </tr>`;
+        const lista = [];
+        snap.forEach(c => lista.unshift(c.val()));
+        lista.forEach(v => {
+            tbody.innerHTML += `<tr><td>${v.nome}</td><td>${v.premio}</td><td>${new Date(v.timestamp).toLocaleTimeString()}</td></tr>`;
         });
     });
 </script>
