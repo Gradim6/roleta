@@ -1,5 +1,30 @@
-// Substitui todo o <script> da roleta pelo seguinte:
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Roleta Hinoportuna</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body { background: #111; color: white; text-align: center; font-family: sans-serif; overflow: hidden; }
+        #canvas-container { position: relative; width: 500px; margin: 20px auto; }
+        canvas { border: 10px solid #333; border-radius: 50%; background: #222; }
+        .seta { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid red; z-index: 10; }
+        #resultado { font-size: 40px; font-weight: bold; margin-top: 20px; color: #ffcc00; height: 50px; }
+        .logo { width: 150px; margin-top: 10px; }
+    </style>
+</head>
+<body>
 
+<img src="logo_hinoportuna.png" class="logo">
+<div id="resultado">Aguardando Tunante...</div>
+
+<div id="canvas-container">
+    <div class="seta"></div>
+    <canvas id="wheel" width="500" height="500"></canvas>
+</div>
+
+<script>
     const firebaseConfig = {
         apiKey: "AIzaSyBVH7T8fgOQhwny3jolprJCLmbCjHBMmGQ",
         authDomain: "roleta-lethes.firebaseapp.com",
@@ -17,7 +42,6 @@
     let premiosAtuais = [];
     const cores = ["#005ea8", "#32CD32", "#ffcc00", "#444444", "#ff4444", "#9b59b6", "#e67e22"];
 
-    // Escuta mudanças nos brindes e redesenha a roleta
     db.ref('configuracao_premios').on('value', (snap) => {
         premiosAtuais = snap.val() || [];
         desenharRoleta();
@@ -27,7 +51,6 @@
         if (premiosAtuais.length === 0) return;
         const total = premiosAtuais.length;
         const slice = (Math.PI * 2) / total;
-        
         ctx.clearRect(0,0,500,500);
         premiosAtuais.forEach((p, i) => {
             ctx.beginPath();
@@ -35,14 +58,12 @@
             ctx.moveTo(250, 250);
             ctx.arc(250, 250, 250, i * slice, (i + 1) * slice);
             ctx.fill();
-            
-            // Texto
             ctx.save();
             ctx.translate(250, 250);
             ctx.rotate(i * slice + slice/2);
             ctx.fillStyle = "white";
-            ctx.font = "bold 14px sans-serif";
-            ctx.fillText(p.n, 110, 5);
+            ctx.font = "bold 16px sans-serif";
+            ctx.fillText(p.n, 100, 5);
             ctx.restore();
         });
     }
@@ -50,7 +71,7 @@
     db.ref('pedidos').on('child_added', (snapshot) => {
         const dados = snapshot.val();
         if (dados && dados.nome) {
-            document.getElementById('resultado').innerText = dados.nome + " está a girar!";
+            document.getElementById('resultado').innerText = dados.nome + " a girar!";
             
             let random = Math.random() * 100;
             let acumulado = 0;
@@ -64,21 +85,28 @@
                 }
             }
 
-            // Gira visualmente (aprox 10 voltas)
-            const voltas = 3600 + (360 - (escolhidoIdx * (360/premiosAtuais.length)));
+            const grausPorFatia = 360 / premiosAtuais.length;
+            const anguloFinal = 3600 + (360 - (escolhidoIdx * grausPorFatia) - (grausPorFatia / 2));
+            
             canvas.style.transition = "transform 4s cubic-bezier(0.15, 0, 0.15, 1)";
-            canvas.style.transform = `rotate(${voltas}deg)`;
+            canvas.style.transform = `rotate(${anguloFinal}deg)`;
 
             setTimeout(() => {
                 const premioGanho = premiosAtuais[escolhidoIdx].n;
                 document.getElementById('resultado').innerText = "Ganhaste: " + premioGanho + "!";
                 
-                // Retira 1 do stock no Firebase
-                let novoStock = premiosAtuais[escolhidoIdx].s - 1;
-                db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(Math.max(0, novoStock));
-
-                // Limpa pedido
+                let novoStock = Math.max(0, premiosAtuais[escolhidoIdx].s - 1);
+                db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(novoStock);
                 db.ref('pedidos/' + snapshot.key).remove();
+                
+                // Reset da rotação para a próxima vez (sem animação)
+                setTimeout(() => {
+                    canvas.style.transition = "none";
+                    canvas.style.transform = `rotate(${anguloFinal % 360}deg)`;
+                }, 1000);
             }, 4500);
         }
     });
+</script>
+</body>
+</html>
