@@ -40,7 +40,7 @@
     const canvas = document.getElementById("wheel");
     const ctx = canvas.getContext("2d");
     let premiosAtuais = [];
-    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#000", "#ff4444", "#9b59b6", "#e67e22", "#1abc9c"];
+    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#111", "#ff4444", "#9b59b6", "#e67e22", "#1abc9c"];
 
     db.ref('configuracao_premios').on('value', (snap) => {
         premiosAtuais = snap.val() || [];
@@ -54,7 +54,7 @@
         
         ctx.clearRect(0,0,550,550);
         premiosAtuais.forEach((p, i) => {
-            // Ajuste para o primeiro prémio começar exatamente no topo (-90 graus)
+            // AQUI ESTÁ O SEGREDO: Começar no topo (-Math.PI / 2)
             const startAngle = (i * slice) - (Math.PI / 2);
             const endAngle = ((i + 1) * slice) - (Math.PI / 2);
 
@@ -64,6 +64,7 @@
             ctx.arc(275, 275, 275, startAngle, endAngle);
             ctx.fill();
 
+            // Texto
             ctx.save();
             ctx.translate(275, 275);
             ctx.rotate(startAngle + slice/2);
@@ -80,7 +81,7 @@
         if (dados && dados.nome && premiosAtuais.length > 0) {
             document.getElementById('resultado').innerText = dados.nome + " a girar...";
             
-            // SORTEIO
+            // 1. SORTEIO
             let random = Math.random() * 100;
             let acumulado = 0;
             let escolhidoIdx = 0;
@@ -89,8 +90,9 @@
                 if(random <= acumulado) { escolhidoIdx = i; break; }
             }
 
+            // 2. CÁLCULO DE ROTAÇÃO PARA PARAR NA SETA
             const grausPorFatia = 360 / premiosAtuais.length;
-            // Cálculo: 10 voltas + compensação para a fatia certa ficar no topo (0 graus na rotação CSS)
+            // Damos 10 voltas e paramos exatamente no centro da fatia sorteada
             const rotacaoFinal = 3600 + (360 - (escolhidoIdx * grausPorFatia)); 
 
             canvas.style.transition = "transform 5s cubic-bezier(0.15, 0, 0.15, 1)";
@@ -100,22 +102,21 @@
                 const ganhou = premiosAtuais[escolhidoIdx];
                 document.getElementById('resultado').innerText = "Ganhaste: " + ganhou.n + "!";
                 
-                // Gravar Histórico no Firebase
+                // Gravar no histórico (para o Admin ver)
                 db.ref('historico').push({
                     nome: dados.nome,
                     premio: ganhou.n,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
 
-                // Atualizar Stock no Firebase
+                // Baixar stock
                 if (ganhou.s > 0) {
                     db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(ganhou.s - 1);
                 }
 
-                // Limpar Pedido
                 db.ref('pedidos/' + snapshot.key).remove();
                 
-                // Reset suave da posição para o próximo
+                // Prepara para o próximo giro sem animação brusca
                 setTimeout(() => {
                     canvas.style.transition = "none";
                     canvas.style.transform = `rotate(${rotacaoFinal % 360}deg)`;
