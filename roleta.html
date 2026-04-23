@@ -136,29 +136,30 @@
             }, 6500); // Mostra o resultado logo após a animação de 6s
         }
 
-        // ESCUTAR O FIREBASE (Pedidos do Telemóvel)
-        db.ref('pedidos').on('child_added', (snapshot) => {
-            const dados = snapshot.val();
-            // Evitar múltiplos giros simultâneos (pode ser melhorado)
-            if (document.getElementById('resultado').innerText.includes("girar")) return;
-
-            document.getElementById('resultado').innerText = dados.nome + " está a girar! Sorte, Tunante!";
-            
-            // Lógica simples de sorteio baseada em % (Isto será feito no Admin no futuro)
-            let random = Math.random() * 100;
-            let acumulado = 0;
-            let escolhido = premios[premios.length-1].n;
-            
-            for(let p of premios) {
-                acumulado += p.p;
-                if(random <= acumulado) { escolhido = p.n; break; }
-            }
-
-            girar(dados.nome, escolhido);
-            
-            // Remove o pedido imediatamente para não repetir
-            db.ref('pedidos/'+snapshot.key).remove();
-        });
+        // ESCUTAR O FIREBASE (Versão corrigida para ler a raiz)
+	db.ref('/').on('child_added', (snapshot) => {
+   	 const dados = snapshot.val();
+    
+  	  // Verifica se o que chegou tem um nome (para não girar com dados vazios)
+ 	   if (dados && dados.nome) {
+ 	       document.getElementById('resultado').innerText = dados.nome + " está a girar! Sorte, Tunante!";
+        
+ 	       // Sorteio de prémio
+  	      let random = Math.random() * 100;
+ 	       let acumulado = 0;
+ 	       let escolhido = premios[premios.length-1].n;
+        
+   	     for(let p of premios) {
+  	          acumulado += p.p;
+  	          if(random <= acumulado) { escolhido = p.n; break; }
+  	      }
+	
+   	     girar(dados.nome, escolhido);
+        
+    	    // Limpa o registro para não repetir o giro se recarregar a página
+    	    db.ref(snapshot.key).remove();
+ 	   }
+	});
 
         drawWheel();
     </script>
