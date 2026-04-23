@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Controle Total</title>
+    <title>Admin Hinoportuna</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -20,20 +20,22 @@
 <div class="card">
     <h2>📦 Configuração de Brindes</h2>
     <table id="tabela-premios">
-        <thead><tr><th>Brinde</th><th>Stock</th><th>% Prob</th><th>Apagar</th></tr></thead>
+        <thead><tr><th>Brinde</th><th>Stock</th><th>%</th><th>Apagar</th></tr></thead>
         <tbody id="corpo-premios"></tbody>
     </table>
     <button onclick="adicionarLinha()" style="margin-top:10px; padding: 10px;">➕ Adicionar Novo</button>
-    <button class="btn-save" onclick="salvarConfig()">💾 GUARDAR E ATUALIZAR ROLETA</button>
+    <button class="btn-save" onclick="salvarConfig()">💾 GUARDAR E ATUALIZAR</button>
 </div>
 
 <div class="card">
-    <h2>🕒 Últimos Ganhadores</h2>
-    <table>
-        <thead><tr><th>Nome</th><th>Ganhou</th><th>Hora</th></tr></thead>
-        <tbody id="corpo-historico"></tbody>
-    </table>
-    <button onclick="limparHistorico()" style="margin-top:10px; color: red; background: none; border: none; cursor: pointer;">Limpar Histórico</button>
+    <h2>🕒 Últimos Ganhadores (Todos)</h2>
+    <div style="max-height: 500px; overflow-y: auto;">
+        <table>
+            <thead><tr><th>Nome</th><th>Ganhou</th><th>Hora</th></tr></thead>
+            <tbody id="corpo-historico"></tbody>
+        </table>
+    </div>
+    <button onclick="if(confirm('Limpar histórico?')) firebase.database().ref('historico').remove()" style="margin-top:15px; color:red; border:none; background:none; cursor:pointer;">Limpar Histórico</button>
 </div>
 
 <script>
@@ -47,7 +49,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Carregar configurações de Brindes
+    // Gestão de Brindes
     db.ref('configuracao_premios').on('value', (snap) => {
         const data = snap.val() || [];
         const tbody = document.getElementById('corpo-premios');
@@ -75,20 +77,16 @@
         alert("Configurações atualizadas!");
     }
 
-    // Carregar Histórico em tempo real
-    db.ref('historico').limitToLast(15).on('value', (snap) => {
+    // HISTÓRICO TOTAL - Atualiza sempre que alguém joga
+    db.ref('historico').on('value', (snap) => {
         const tbody = document.getElementById('corpo-historico');
         tbody.innerHTML = "";
         const lista = [];
-        snap.forEach(child => lista.unshift(child.val())); // Mais recentes primeiro
+        snap.forEach(child => { lista.unshift(child.val()); });
         lista.forEach(v => {
             tbody.innerHTML += `<tr><td>${v.nome}</td><td>${v.premio}</td><td>${new Date(v.timestamp).toLocaleTimeString()}</td></tr>`;
         });
     });
-
-    function limparHistorico() {
-        if(confirm("Desejas limpar a lista de ganhadores?")) db.ref('historico').remove();
-    }
 </script>
 </body>
 </html>
