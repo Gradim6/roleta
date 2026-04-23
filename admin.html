@@ -2,28 +2,29 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Hinoportuna</title>
+    <title>Admin - Controle Total</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f4f4; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
         th { background: #005ea8; color: white; }
         .btn-save { background: #32CD32; color: white; border: none; padding: 15px; cursor: pointer; border-radius: 5px; width: 100%; font-weight: bold; margin-top: 10px; }
+        input { width: 90%; padding: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📦 Gestão de Brindes</h2>
+    <h2>📦 Configuração de Brindes</h2>
     <table id="tabela-premios">
-        <thead><tr><th>Nome</th><th>Stock</th><th>%</th><th>X</th></tr></thead>
+        <thead><tr><th>Brinde</th><th>Stock</th><th>% Prob</th><th>Apagar</th></tr></thead>
         <tbody id="corpo-premios"></tbody>
     </table>
-    <button onclick="adicionarLinha()" style="margin-top:10px;">➕ Adicionar</button>
-    <button class="btn-save" onclick="salvarConfig()">💾 GUARDAR TUDO</button>
+    <button onclick="adicionarLinha()" style="margin-top:10px; padding: 10px;">➕ Adicionar Novo</button>
+    <button class="btn-save" onclick="salvarConfig()">💾 GUARDAR E ATUALIZAR ROLETA</button>
 </div>
 
 <div class="card">
@@ -32,6 +33,7 @@
         <thead><tr><th>Nome</th><th>Ganhou</th><th>Hora</th></tr></thead>
         <tbody id="corpo-historico"></tbody>
     </table>
+    <button onclick="limparHistorico()" style="margin-top:10px; color: red; background: none; border: none; cursor: pointer;">Limpar Histórico</button>
 </div>
 
 <script>
@@ -45,15 +47,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Carregar configurações de Brindes
     db.ref('configuracao_premios').on('value', (snap) => {
         const data = snap.val() || [];
         const tbody = document.getElementById('corpo-premios');
         tbody.innerHTML = "";
         data.forEach((item, i) => {
             tbody.innerHTML += `<tr>
-                <td><input type="text" class="p-n" value="${item.n}" style="width:100px"></td>
-                <td><input type="number" class="p-s" value="${item.s}" style="width:50px"></td>
-                <td><input type="number" class="p-p" value="${item.p}" style="width:50px"></td>
+                <td><input type="text" class="p-n" value="${item.n}"></td>
+                <td><input type="number" class="p-s" value="${item.s}"></td>
+                <td><input type="number" class="p-p" value="${item.p}"></td>
                 <td><button onclick="this.parentElement.parentElement.remove()">❌</button></td>
             </tr>`;
         });
@@ -69,19 +72,23 @@
         const novos = [];
         ns.forEach((n, i) => novos.push({ n: n.value, s: parseInt(ss[i].value), p: parseInt(ps[i].value) }));
         db.ref('configuracao_premios').set(novos);
-        alert("Configurações Guardadas!");
+        alert("Configurações atualizadas!");
     }
 
-    // Histórico de Ganhadores
+    // Carregar Histórico em tempo real
     db.ref('historico').limitToLast(15).on('value', (snap) => {
         const tbody = document.getElementById('corpo-historico');
         tbody.innerHTML = "";
         const lista = [];
-        snap.forEach(c => lista.unshift(c.val()));
+        snap.forEach(child => lista.unshift(child.val())); // Mais recentes primeiro
         lista.forEach(v => {
             tbody.innerHTML += `<tr><td>${v.nome}</td><td>${v.premio}</td><td>${new Date(v.timestamp).toLocaleTimeString()}</td></tr>`;
         });
     });
+
+    function limparHistorico() {
+        if(confirm("Desejas limpar a lista de ganhadores?")) db.ref('historico').remove();
+    }
 </script>
 </body>
 </html>
