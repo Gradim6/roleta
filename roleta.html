@@ -68,22 +68,26 @@
         });
     }
 
-    db.ref('pedidos').on('child_added', (snapshot) => {
+   db.ref('pedidos').on('child_added', (snapshot) => {
         const dados = snapshot.val();
         if (dados && dados.nome) {
-            document.getElementById('resultado').innerText = dados.nome + " a girar!";
+            document.getElementById('resultado').innerText = dados.nome + " a girar...";
             
             let random = Math.random() * 100;
             let acumulado = 0;
-            let escolhidoIdx = 0;
+            let escolhidoIdx = -1;
 
+            // Lógica de sorteio baseada nas probabilidades do Admin
             for(let i=0; i < premiosAtuais.length; i++) {
                 acumulado += premiosAtuais[i].p;
-                if(random <= acumulado && premiosAtuais[i].s > 0) {
+                if(random <= acumulado) {
                     escolhidoIdx = i;
                     break;
                 }
             }
+
+            // Fallback caso a soma não seja 100%
+            if (escolhidoIdx === -1) escolhidoIdx = premiosAtuais.length - 1;
 
             const grausPorFatia = 360 / premiosAtuais.length;
             const anguloFinal = 3600 + (360 - (escolhidoIdx * grausPorFatia) - (grausPorFatia / 2));
@@ -93,17 +97,24 @@
 
             setTimeout(() => {
                 const premioGanho = premiosAtuais[escolhidoIdx].n;
+                
+                // CORREÇÃO: Exibe o nome real do prémio sorteado
                 document.getElementById('resultado').innerText = "Ganhaste: " + premioGanho + "!";
                 
-                let novoStock = Math.max(0, premiosAtuais[escolhidoIdx].s - 1);
-                db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(novoStock);
+                // CORREÇÃO: Descontar stock no Firebase
+                if (premiosAtuais[escolhidoIdx].s > 0 && premioGanho !== "Tenta outra vez") {
+                    let novoStock = premiosAtuais[escolhidoIdx].s - 1;
+                    db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(novoStock);
+                }
+
+                // CORREÇÃO: Registar nas "Últimas Entradas" antes de apagar o pedido
+                db.ref('historico').push({
+                    nome: dados.nome,
+                    premio: premioGanho,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+
                 db.ref('pedidos/' + snapshot.key).remove();
-                
-                // Reset da rotação para a próxima vez (sem animação)
-                setTimeout(() => {
-                    canvas.style.transition = "none";
-                    canvas.style.transform = `rotate(${anguloFinal % 360}deg)`;
-                }, 1000);
             }, 4500);
         }
     });
