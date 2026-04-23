@@ -21,8 +21,8 @@
             height: 100vh; 
         }
         
-        /* QR Code na lateral esquerda sem afetar o centro da roleta */
-        #qr-container { 
+        /* QR Code de Jogar (Esquerda) */
+        #qr-jogar { 
             position: absolute; 
             left: 50px; 
             top: 50%; 
@@ -30,8 +30,19 @@
             z-index: 100; 
             text-align: center; 
         }
-        #qr-code { width: 280px; height: auto; border-radius: 10px; display: block; }
-        #qr-text { margin-top: 15px; font-weight: bold; font-size: 1.5rem; color: #ffcc00; text-shadow: 2px 2px #000; }
+        
+        /* QR Code das Redes (Direita) */
+        #qr-redes { 
+            position: absolute; 
+            right: 50px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            z-index: 100; 
+            text-align: center; 
+        }
+
+        .qr-img { width: 260px; height: auto; border-radius: 10px; display: block; }
+        .qr-text { margin-top: 15px; font-weight: bold; font-size: 1.3rem; color: #ffcc00; text-shadow: 2px 2px #000; max-width: 260px; }
         
         #resultado { 
             font-size: 4rem; 
@@ -41,9 +52,10 @@
             text-shadow: 4px 4px #000; 
             height: 90px; 
             width: 100%;
+            z-index: 10;
         }
         
-        /* Contentor da Roleta centralizado */
+        /* Contentor da Roleta - Fica no Centro Perfeito */
         #canvas-container { 
             position: relative; 
             width: 600px; 
@@ -60,7 +72,6 @@
             box-shadow: 0 0 60px rgba(0,0,0,0.7); 
         }
         
-        /* Seta no Topo - Ajustada para o centro exato */
         .seta { 
             position: absolute; 
             top: -25px; 
@@ -86,14 +97,19 @@
             padding: 5px; 
         }
         
-        .logo-top { width: 150px; margin-bottom: 10px; }
+        .logo-top { width: 150px; margin-bottom: 10px; z-index: 10; }
     </style>
 </head>
 <body>
 
-<div id="qr-container">
-    <img src="qr_code_lethes.png" id="qr-code">
-    <div id="qr-text">SCAN PARA JOGAR</div>
+<div id="qr-jogar">
+    <img src="qr_code_lethes.png" class="qr-img">
+    <div class="qr-text">SCAN PARA JOGAR</div>
+</div>
+
+<div id="qr-redes">
+    <img src="qr_code_redes_hinoportuna.png" class="qr-img">
+    <div class="qr-text">SEGUE AS NOSSAS REDES SOCIAIS</div>
 </div>
 
 <img src="logo_hinoportuna.png" class="logo-top">
