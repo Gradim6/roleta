@@ -6,16 +6,27 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        body { background: #111; color: white; text-align: center; font-family: sans-serif; overflow: hidden; margin: 0; }
-        #resultado { font-size: 3.5rem; font-weight: bold; margin: 20px; color: #ffcc00; height: 70px; text-shadow: 3px 3px #000; }
-        #canvas-container { position: relative; width: 550px; height: 550px; margin: 0 auto; }
-        canvas { border: 15px solid #333; border-radius: 50%; background: #222; }
+        body { background: #111; color: white; text-align: center; font-family: sans-serif; overflow: hidden; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        
+        /* QR Code no canto esquerdo */
+        #qr-code { position: absolute; top: 20px; left: 20px; width: 150px; border: 5px solid white; border-radius: 10px; z-index: 30; }
+        
+        #resultado { font-size: 3.5rem; font-weight: bold; margin-bottom: 20px; color: #ffcc00; text-shadow: 3px 3px #000; height: 70px; }
+        
+        #canvas-container { position: relative; width: 550px; height: 550px; margin-top: -30px; /* Ajuste fino de posição vertical */ }
+        
+        canvas { border: 15px solid #333; border-radius: 50%; background: #222; transform: rotate(0deg); /* Começa em 0 */ }
+        
         .seta { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid #ff0000; z-index: 20; }
+        
         #ze-central { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 110px; z-index: 15; border-radius: 50%; background: white; padding: 5px; }
-        .logo-top { width: 130px; margin-top: 15px; }
+        
+        .logo-top { width: 130px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+
+<img src="qr_code_lethes.png" id="qr-code" alt="Scan para Girar">
 
 <img src="logo_hinoportuna.png" class="logo-top">
 <div id="resultado">Aguardando Tunante...</div>
@@ -27,6 +38,7 @@
 </div>
 
 <script>
+    // Configuração do teu Firebase (não alterada)
     const firebaseConfig = {
         apiKey: "AIzaSyBVH7T8fgOQhwny3jolprJCLmbCjHBMmGQ",
         authDomain: "roleta-lethes.firebaseapp.com",
@@ -39,9 +51,14 @@
 
     const canvas = document.getElementById("wheel");
     const ctx = canvas.getContext("2d");
+    const cw = canvas.width / 2;
+    const ch = canvas.height / 2;
     let premiosAtuais = [];
-    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#111", "#ff4444", "#9b59b6", "#e67e22", "#1abc9c"];
+    
+    // Cores das fatias
+    const cores = ["#005ea8", "#32CD32", "#ffcc00", "#111111", "#ff4444", "#9b59b6", "#e67e22", "#1abc9c"];
 
+    // Carrega brindes do Admin
     db.ref('configuracao_premios').on('value', (snap) => {
         premiosAtuais = snap.val() || [];
         desenharRoleta();
@@ -53,35 +70,40 @@
         const slice = (Math.PI * 2) / total;
         
         ctx.clearRect(0,0,550,550);
+        
         premiosAtuais.forEach((p, i) => {
-            // AQUI ESTÁ O SEGREDO: Começar no topo (-Math.PI / 2)
+            // CORREÇÃO DEFINITIVA: O Canvas começa a desenhar a -90 graus (topo)
             const startAngle = (i * slice) - (Math.PI / 2);
             const endAngle = ((i + 1) * slice) - (Math.PI / 2);
 
+            // Desenhar a fatia colorida
             ctx.beginPath();
             ctx.fillStyle = cores[i % cores.length];
-            ctx.moveTo(275, 275);
-            ctx.arc(275, 275, 275, startAngle, endAngle);
+            ctx.moveTo(cw, ch);
+            ctx.arc(cw, ch, cw, startAngle, endAngle);
             ctx.fill();
 
-            // Texto
+            // Desenhar o texto (nome do brinde)
             ctx.save();
-            ctx.translate(275, 275);
-            ctx.rotate(startAngle + slice/2);
+            ctx.translate(cw, ch);
+            ctx.rotate(startAngle + slice/2); // Rotaciona para o centro da fatia
             ctx.fillStyle = "white";
             ctx.font = "bold 18px sans-serif";
             ctx.textAlign = "right";
-            ctx.fillText(p.n, 240, 8);
+            
+            // O texto é desenhado de dentro para fora, parando perto da borda
+            ctx.fillText(p.n, cw - 15, 8); 
             ctx.restore();
         });
     }
 
+    // Escuta novos pedidos
     db.ref('pedidos').on('child_added', (snapshot) => {
         const dados = snapshot.val();
         if (dados && dados.nome && premiosAtuais.length > 0) {
             document.getElementById('resultado').innerText = dados.nome + " a girar...";
             
-            // 1. SORTEIO
+            // 1. Lógica de Sorteio
             let random = Math.random() * 100;
             let acumulado = 0;
             let escolhidoIdx = 0;
@@ -90,19 +112,24 @@
                 if(random <= acumulado) { escolhidoIdx = i; break; }
             }
 
-            // 2. CÁLCULO DE ROTAÇÃO PARA PARAR NA SETA
+            // 2. Lógica de Rotação Visível
+            // Agora que o Canvas começa no topo, a rotação é direta
             const grausPorFatia = 360 / premiosAtuais.length;
+            
             // Damos 10 voltas e paramos exatamente no centro da fatia sorteada
+            // Como o Canvas já está alinhado ao topo, o cálculo é direto:
             const rotacaoFinal = 3600 + (360 - (escolhidoIdx * grausPorFatia)); 
 
+            // Aplica a animação
             canvas.style.transition = "transform 5s cubic-bezier(0.15, 0, 0.15, 1)";
             canvas.style.transform = `rotate(${rotacaoFinal}deg)`;
 
+            // Espera a animação acabar (5s) + um pequeno delay (0.5s)
             setTimeout(() => {
                 const ganhou = premiosAtuais[escolhidoIdx];
                 document.getElementById('resultado').innerText = "Ganhaste: " + ganhou.n + "!";
                 
-                // Gravar no histórico (para o Admin ver)
+                // Gravar no histórico (para o Admin)
                 db.ref('historico').push({
                     nome: dados.nome,
                     premio: ganhou.n,
@@ -114,9 +141,10 @@
                     db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(ganhou.s - 1);
                 }
 
+                // Limpar o pedido para a roleta ficar pronta para o próximo
                 db.ref('pedidos/' + snapshot.key).remove();
                 
-                // Prepara para o próximo giro sem animação brusca
+                // Reset suave da posição visível para o próximo giro
                 setTimeout(() => {
                     canvas.style.transition = "none";
                     canvas.style.transform = `rotate(${rotacaoFinal % 360}deg)`;
