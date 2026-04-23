@@ -201,4 +201,88 @@
         // Disparar de 3 pontos diferentes para cobrir o ecrã
         // Esquerda
         myConfetti({
-            particleCount:
+            particleCount: 80,
+            angle: 60,
+            spread: 70,
+            origin: { x: 0.1, y: 0.8 },
+            colors: coresFesta,
+            startVelocity: 45
+        });
+        // Centro (Cima)
+        myConfetti({
+            particleCount: 100,
+            angle: -90,
+            spread: 120,
+            origin: { x: 0.5, y: 0 },
+            colors: coresFesta,
+            startVelocity: 35
+        });
+        // Direita
+        myConfetti({
+            particleCount: 80,
+            angle: 120,
+            spread: 70,
+            origin: { x: 0.9, y: 0.8 },
+            colors: coresFesta,
+            startVelocity: 45
+        });
+    }
+
+    // Escuta Novos Pedidos
+    db.ref('pedidos').on('child_added', (snapshot) => {
+        const dados = snapshot.val();
+        if (dados && dados.nome && premiosAtuais.length > 0) {
+            document.getElementById('resultado').innerText = dados.nome + " a girar...";
+            let random = Math.random() * 100, acumulado = 0, escolhidoIdx = 0;
+            for(let i=0; i < premiosAtuais.length; i++) {
+                acumulado += premiosAtuais[i].p;
+                if(random <= acumulado) { escolhidoIdx = i; break; }
+            }
+
+            const grausPorFatia = 360 / premiosAtuais.length;
+            const compensacaoCentro = grausPorFatia / 2;
+            const rotacaoFinal = 3600 + (360 - (escolhidoIdx * grausPorFatia)) - compensacaoCentro; 
+
+            canvasWheel.style.transition = "transform 5s cubic-bezier(0.1, 0, 0.1, 1)";
+            canvasWheel.style.transform = `rotate(${rotacaoFinal}deg)`;
+
+            setTimeout(() => {
+                const ganhou = premiosAtuais[escolhidoIdx];
+                const resDiv = document.getElementById('resultado');
+
+                // Lógica de Mensagem
+                if (ganhou.n.toLowerCase().includes("tenta outra vez")) {
+                    resDiv.innerText = "Tenta outra vez!";
+                    // SEM confetis aqui
+                } else {
+                    resDiv.innerText = "Ganhaste: " + ganhou.n + "!";
+                    // DISPARA CONFETIS MULTICOLOR SOBRE O ECRÃ
+                    dispararConfetis();
+                }
+
+                // Gravar Histórico (para o Admin ver todos) SEM APAGAR
+                db.ref('historico').push({
+                    nome: dados.nome,
+                    premio: ganhou.n,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+
+                // Baixar Stock
+                if (ganhou.s > 0) {
+                    db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(ganhou.s - 1);
+                }
+
+                // Limpar Pedido
+                db.ref('pedidos/' + snapshot.key).remove();
+                
+                // Reset suave da posição visível para o próximo giro
+                setTimeout(() => {
+                    canvasWheel.style.transition = "none";
+                    canvasWheel.style.transform = `rotate(${rotacaoFinal % 360}deg)`;
+                }, 500);
+            }, 5500);
+        }
+    });
+</script>
+</body>
+</html>
