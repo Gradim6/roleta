@@ -106,6 +106,28 @@
             tbody.innerHTML += `<tr><td>${val.nome}</td><td>${new Date(val.timestamp).toLocaleTimeString()}</td></tr>`;
         });
     });
+    
+    // Monitorizar o Histórico de Prémios (Últimas Entradas)
+    db.ref('historico').limitToLast(10).on('value', (snapshot) => {
+        const tbody = document.getElementById('corpo-fila');
+        tbody.innerHTML = "";
+        
+        // Vamos transformar em array para mostrar os mais recentes primeiro
+        const entradas = [];
+        snapshot.forEach((child) => {
+            entradas.unshift(child.val()); 
+        });
+
+        entradas.forEach((val) => {
+            const hora = new Date(val.timestamp).toLocaleTimeString();
+            tbody.innerHTML += `
+                <tr>
+                    <td>${val.nome}</td>
+                    <td>${val.premio}</td>
+                    <td>${hora}</td>
+                </tr>`;
+        });
+    });
 </script>
 </body>
 </html>
