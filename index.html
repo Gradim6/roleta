@@ -1,32 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gira a Roleta - Hinoportuna</title>
+    <title>Hinoportuna - Girar</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <style>
-        body { background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-        .logo { width: 200px; margin-bottom: 30px; }
-        input { padding: 15px; width: 80%; border-radius: 10px; border: 2px solid #32CD32; background: #222; color: white; font-size: 1.2rem; margin-bottom: 20px; }
-        button { padding: 15px 40px; border-radius: 10px; border: none; background: #ffcc00; color: #000; font-weight: bold; font-size: 1.3rem; cursor: pointer; box-shadow: 0 5px 15px rgba(255,204,0,0.4); }
-        button:active { transform: scale(0.95); }
-    </style>
 </head>
-<body>
+<body style="background:#000; color:#fff; text-align:center; font-family:sans-serif; padding:50px 20px;">
 
-    <img src="logo_hinoportuna.png" class="logo" alt="Hinoportuna">
+    <img src="logo_hinoportuna.png" style="width:150px;">
+    <h2>Roleta Hinoportuna</h2>
     
-    <h2>Estás pronto para ganhar?</h2>
-    <p>Inscreve o teu nome e olha para o monitor!</p>
-
-    <input type="text" id="nomeCliente" placeholder="Escreve aqui o teu nome..." required>
-    <br>
-    <button onclick="enviarGiro()">GIRAR A ROLETA!</button>
+    <input type="text" id="nome" placeholder="Teu Nome" style="padding:15px; width:80%; font-size:1.2rem; border-radius:10px; border:none;">
+    <br><br>
+    <button onclick="enviar()" style="padding:20px 40px; font-size:1.5rem; background:#ffcc00; border:none; border-radius:10px; font-weight:bold;">GIRAR AGORA!</button>
 
     <script>
-        // CONFIGURAÇÃO DO FIREBASE (Igual à anterior)
         const firebaseConfig = {
             apiKey: "AIzaSyBVH7T8fgOQhwny3jolprJCLmbCjHBMmGQ",
             authDomain: "roleta-lethes.firebaseapp.com",
@@ -34,27 +24,25 @@
             projectId: "roleta-lethes",
             storageBucket: "roleta-lethes.firebasestorage.app",
             messagingSenderId: "539471979058",
-            appId: "1:539471979058:web:e1636f48c93e0e50e0922b",
-            measurementId: "G-LC28QJSJ5C"
+            appId: "1:539471979058:web:e1636f48c93e0e50e0922b"
         };
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        function enviarGiro() {
-            const nome = document.getElementById('nomeCliente').value;
-            if(nome.trim() === "") {
-                alert("Diz-nos o teu nome primeiro!");
-                return;
-            }
+        function enviar() {
+            const nomeInput = document.getElementById('nome').value;
+            if(!nomeInput) return alert("Escreve o teu nome!");
 
-            // Envia o nome para a base de dados
+            // Tenta escrever na base de dados
             db.ref('pedidos').push({
-                nome: nome,
+                nome: nomeInput,
                 timestamp: Date.now()
             }).then(() => {
-                alert("Boa sorte! Vê a roleta a girar no monitor!");
-                document.getElementById('nomeCliente').value = ""; // Limpa o campo
+                alert("Enviado! Olha para o Monitor!");
+                document.getElementById('nome').value = "";
+            }).catch((error) => {
+                alert("Erro ao enviar: " + error.message);
             });
         }
     </script>
