@@ -55,7 +55,6 @@
             z-index: 10;
         }
         
-        /* Contentor da Roleta - Fica no Centro Perfeito */
         #canvas-container { 
             position: relative; 
             width: 600px; 
@@ -186,10 +185,19 @@
 
             setTimeout(() => {
                 const ganhou = premiosAtuais[escolhidoIdx];
-                document.getElementById('resultado').innerText = "Ganhaste: " + ganhou.n + "!";
+                const resDiv = document.getElementById('resultado');
+
+                // Lógica para remover o "Ganhaste" se for Tenta Outra Vez
+                if (ganhou.n.toLowerCase().includes("tenta outra vez")) {
+                    resDiv.innerText = "Tenta outra vez!";
+                } else {
+                    resDiv.innerText = "Ganhaste: " + ganhou.n + "!";
+                }
+
                 db.ref('historico').push({ nome: dados.nome, premio: ganhou.n, timestamp: firebase.database.ServerValue.TIMESTAMP });
                 if (ganhou.s > 0) db.ref(`configuracao_premios/${escolhidoIdx}/s`).set(ganhou.s - 1);
                 db.ref('pedidos/' + snapshot.key).remove();
+                
                 setTimeout(() => {
                     canvas.style.transition = "none";
                     canvas.style.transform = `rotate(${rotacaoFinal % 360}deg)`;
